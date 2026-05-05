@@ -425,15 +425,49 @@ const pdf = {
                   height: 60,
                   borderRadius: "50%",
                   marginBottom: 8,
+            
                 }}
               />
+            
             )}
 
             <p><b>{user.shopName}</b></p>
-            <p>{user.phone}</p>
-            <p>{user.location}</p>
-          </div>
+<p>{user.phone}</p>
+<p>{user.location}</p>
 
+{/* 🔥 PAYMENT DETAILS */}
+{user.payment?.type && (
+  <div style={{ marginTop: 10 }}>
+    <p><b>Payment Method:</b> {user.payment.type}</p>
+
+    {user.payment.type === "agent" && (
+      <>
+        <p>Agent No: {user.payment.agentNumber}</p>
+        <p>Store No: {user.payment.storeNumber}</p>
+      </>
+    )}
+
+    {user.payment.type === "till" && (
+      <p>Till No: {user.payment.tillNumber}</p>
+    )}
+
+    {user.payment.type === "pochi" && (
+      <p>Pochi No: {user.payment.pochiNumber}</p>
+    )}
+
+    {user.payment.type === "sendmoney" && (
+      <p>Send Money No: {user.payment.sendMoneyNumber}</p>
+    )}
+
+    {user.payment.type === "paybill" && (
+      <>
+        <p>PayBill No: {user.payment.paybillNumber}</p>
+        <p>Account No: {user.payment.accountNumber}</p>
+      </>
+    )}
+  </div>
+)}
+</div>
           <div style={boxRight}>
             <b>CUSTOMER</b>
             <div><b>Name:</b> {customer.name}</div>
@@ -507,5 +541,5 @@ const pdf = {
     ))}
 
   </div>
-);
+  );
 }
