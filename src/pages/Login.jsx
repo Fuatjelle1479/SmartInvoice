@@ -79,7 +79,7 @@ export default function Login() {
       (p || "").replace(/\s+/g, "").replace("+", "");
 
     const identifier = form.identifier?.trim();
-    const isEmail = identifier?.includes("@");
+    
 
     /* ================= FIXED DUPLICATE CHECK ================= */
 const exists = users.some((u) => {
@@ -137,10 +137,11 @@ const exists = users.some((u) => {
       return navigate("/");
     }
 
+
     /* ================= LOGIN (FIXED STABLE LOGIC) ================= */
 /* ================= LOGIN (FIXED STABLE LOGIC) ================= */
 const cleanIdentifier = identifier?.trim()?.toLowerCase();
-
+const isEmail = cleanIdentifier?.includes("@");
 
 const normalizedPhoneInput = cleanIdentifier
   ? normalizePhone(cleanIdentifier)
