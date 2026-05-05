@@ -138,7 +138,9 @@ const exists = users.some((u) => {
     }
 
     /* ================= LOGIN (FIXED STABLE LOGIC) ================= */
-const isEmail = cleanIdentifier?.includes("@");
+/* ================= LOGIN (FIXED STABLE LOGIC) ================= */
+const cleanIdentifier = identifier?.trim()?.toLowerCase();
+
 
 const normalizedPhoneInput = cleanIdentifier
   ? normalizePhone(cleanIdentifier)
@@ -160,6 +162,11 @@ const user = users.find((u) => {
 
   return passwordMatch && (emailMatch || phoneMatch);
 });
+
+if (!user) return alert("Invalid credentials");
+
+saveSession(user);
+navigate("/");
 
   /* ================= RESET USERS ================= */
   const resetUsers = () => {
