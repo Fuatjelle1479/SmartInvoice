@@ -199,37 +199,44 @@ export default function Login() {
 
 /* ================= STYLES ================= */
 
+/* PAGE */
 const page = {
   display: "flex",
   justifyContent: "center",
   alignItems: "center",
-  height: "100vh",
+  minHeight: "100vh", // 🔥 FIX (better than height)
+  padding: 12,
   background: "#f1f5f9",
 };
 
+/* BOX */
 const box = {
   background: "white",
-  padding: 25,
-  borderRadius: 10,
-  width: 350,
+  padding: 20,
+  borderRadius: 12,
+  width: "100%",
+  maxWidth: 380, // ✅ FIXED camelCase
   boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
 };
 
+/* INPUT */
 const input = {
   width: "100%",
-  padding: 10,
+  padding: 14,          // 🔥 slightly bigger for touch
   marginTop: 10,
   border: "1px solid #ddd",
-  borderRadius: 6,
+  borderRadius: 8,
+  fontSize: 14,         // 🔥 consistent mobile size
 };
 
+/* BUTTON */
 const btn = {
   width: "100%",
-  padding: 12,
+  padding: 14,
   marginTop: 15,
   background: "#16a34a",
   color: "white",
   border: "none",
-  borderRadius: 6,
-  cursor: "pointer",
+  borderRadius: 8,
+  fontSize: 15,
 };

@@ -1,7 +1,8 @@
-import { useNavigate, Outlet } from "react-router-dom";
+import { useNavigate, Outlet, useLocation } from "react-router-dom";
 
 export default function MainLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     localStorage.removeItem("user");
@@ -11,25 +12,33 @@ export default function MainLayout() {
 
   return (
     <div style={container}>
-      {/* SIDEBAR */}
-      <div style={sidebar}>
-        <h2 style={{ marginBottom: 20 }}>SmartInvoice</h2>
-
-        <button style={linkBtn} onClick={() => navigate("/")}>
-          📊 Dashboard
-        </button>
-
-        {/* Removed Customers page (not needed anymore) */}
-        <div style={{ flex: 1 }} />
-
-        <button style={logoutBtn} onClick={handleLogout}>
-          🚪 Logout
-        </button>
+      {/* TOP BAR */}
+      <div style={topBar}>
+        <span style={logo}>SmartInvoice</span>
       </div>
 
       {/* MAIN CONTENT */}
       <div style={content}>
         <Outlet />
+      </div>
+
+      {/* MOBILE BOTTOM NAV */}
+      <div style={bottomNav}>
+        <button
+          style={{
+            ...navBtn,
+            color: location.pathname === "/" ? "#38bdf8" : "#fff",
+          }}
+          onClick={() => navigate("/")}
+        >
+          📊
+          <span style={label}>Home</span>
+        </button>
+
+        <button style={navBtn} onClick={handleLogout}>
+          🚪
+          <span style={label}>Logout</span>
+        </button>
       </div>
     </div>
   );
@@ -38,41 +47,74 @@ export default function MainLayout() {
 /* ===== STYLES ===== */
 
 const container = {
-  display: "flex",
   minHeight: "100vh",
-};
-
-const sidebar = {
-  width: 220,
-  background: "#0f172a",
-  color: "white",
-  padding: 20,
+  background: "#f1f5f9",
   display: "flex",
   flexDirection: "column",
 };
 
-const content = {
-  flex: 1,
-  padding: 20,
-  background: "#f1f5f9",
+/* TOP BAR */
+const topBar = {
+  height: 55,
+  background: "#0f172a",
+  color: "white",
+  display: "flex",
+  alignItems: "center",
+  padding: "0 16px",
+  fontWeight: "bold",
+  fontSize: 16,
+  position: "sticky",
+  top: 0,
+  zIndex: 10,
 };
 
-const linkBtn = {
-  padding: "10px",
-  textAlign: "left",
+const logo = {
+  letterSpacing: 0.5,
+};
+
+/* CONTENT */
+const content = {
+  flex: 1,
+  padding: 12,
+  paddingBottom: 80, // space for bottom nav
+  width: "100%",
+  maxWidth: 600,
+  margin: "0 auto",
+  boxSizing: "border-box",
+};
+
+/* BOTTOM NAV */
+const bottomNav = {
+  position: "fixed",
+  bottom: 0,
+  left: 0,
+  right: 0,
+  height: 65,
+  background: "#0f172a",
+  display: "flex",
+  justifyContent: "space-around",
+  alignItems: "center",
+  boxShadow: "0 -2px 10px rgba(0,0,0,0.2)",
+  borderTopLeftRadius: 12,
+  borderTopRightRadius: 12,
+};
+
+/* NAV BUTTON */
+const navBtn = {
   background: "transparent",
   color: "white",
   border: "none",
+  fontSize: 20,
   cursor: "pointer",
-  borderRadius: 6,
-  marginBottom: 8,
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  gap: 2,
+  flex: 1,
+  padding: "6px 0",
 };
 
-const logoutBtn = {
-  padding: "10px",
-  background: "#dc2626",
-  color: "white",
-  border: "none",
-  cursor: "pointer",
-  borderRadius: 6,
+/* LABEL */
+const label = {
+  fontSize: 10,
 };

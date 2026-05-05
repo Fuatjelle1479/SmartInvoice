@@ -41,25 +41,25 @@ export default function Invoice() {
   if (!customer) return <h3>Customer not found</h3>;
 
   /* ➕ ADD RECEIPT */
-  const generateInvoiceNo = (debts) => {
-    const count = debts?.length || 0;
+  const generateInvoiceNo = (invoice) => {
+    const count = invoice?.length || 0;
     return `#${String(count + 1).padStart(3, "0")}`;
   };
 
   const addReceipt = () => {
-    const currentDebts =
-      customers.find((c) => c.id === id)?.debts || [];
+    const currentInvoice =
+      customers.find((c) => c.id === id)?.invoice || [];
 
     const newReceipt = {
       id: crypto.randomUUID(),
-      invoiceNo: generateInvoiceNo(currentDebts),
+      invoiceNo: generateInvoiceNo(currentInvoice),
       date: new Date().toISOString().split("T")[0],
       items: [],
     };
 
     const updated = customers.map((c) =>
       c.id === id
-        ? { ...c, debts: [...(c.debts || []), newReceipt] }
+        ? { ...c, invoice: [...(c.invoice || []), newReceipt] }
         : c
     );
 
@@ -69,7 +69,7 @@ export default function Invoice() {
   const deleteReceipt = () => {
     const updated = customers.map((c) =>
       c.id === id
-        ? { ...c, debts: (c.debts || []).slice(0, -1) }
+        ? { ...c, invoice: (c.invoice || []).slice(0, -1) }
         : c
     );
 
@@ -81,7 +81,7 @@ export default function Invoice() {
       c.id === id
         ? {
             ...c,
-            debts: c.debts.map((r) =>
+            invoice: c.invoice.map((r) =>
               r.id === rid
                 ? {
                     ...r,
@@ -104,7 +104,7 @@ export default function Invoice() {
       c.id === id
         ? {
             ...c,
-            debts: c.debts.map((r) =>
+            invoice: c.invoice.map((r) =>
               r.id === rid
                 ? {
                     ...r,
@@ -126,7 +126,7 @@ export default function Invoice() {
       c.id === id
         ? {
             ...c,
-            debts: c.debts.map((r) =>
+            invoice: c.invoice.map((r) =>
               r.id === rid
                 ? {
                     ...r,
@@ -171,6 +171,7 @@ export default function Invoice() {
   if (method === "whatsapp") {
     const message = `Invoice from ${user.shopName} - ${customer.name}`;
 
+    // BEST OPTION: native share (attaches image)
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
         await navigator.share({
@@ -184,18 +185,45 @@ export default function Invoice() {
       }
     }
 
-    alert("Sharing not supported on this device");
+    // fallback: opens WhatsApp search/chat (NO image attach possible)
+    const fallbackUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(fallbackUrl, "_blank");
   }
 
   // ================= SMS =================
-  // SMS (FIXED - opens native app properly)
-if (method === "sms") {
-  const receipt = customer?.debts?.find((r) => r.id === receiptId);
+  if (method === "sms") {
+  const receipt = customer?.invoice?.find((r) => r.id === receiptId);
 
-  const message = `Invoice from ${user.shopName}
-Customer: ${customer.name}
+  const itemsText = (receipt?.items || [])
+    .map((i, index) => {
+      return `${index + 1}. ${i.name} - KES ${i.price}`;
+    })
+    .join("\n");
+
+  const total = getTotal(receipt?.items || []);
+
+  const message = `
+INVOICE RECEIPT
+-----------------------
+SHOP DETAILS
+Name: ${user.shopName || "N/A"}
+Phone: ${user.phone || "N/A"}
+Payment: ${user.paymentDetails || "N/A"}
+
+-----------------------
+CUSTOMER DETAILS
+Name: ${customer.name}
 Phone: ${customer.phone}
-Total: KES ${getTotal(receipt?.items || [])}`;
+
+-----------------------
+ITEMS
+${itemsText || "No items added"}
+
+-----------------------
+TOTAL: KES ${total}
+
+Thank you for your business!
+`;
 
   const phone = (customer.phone || "")
     .replace(/\s+/g, "")
@@ -203,241 +231,281 @@ Total: KES ${getTotal(receipt?.items || [])}`;
 
   const encoded = encodeURIComponent(message);
 
-  // ANDROID + MOST DEVICES
-  const androidSms = `sms:${phone}?body=${encoded}`;
+  const smsUrl = /iPhone|iPad|iPod/.test(navigator.userAgent)
+    ? `sms:${phone}&body=${encoded}`
+    : `sms:${phone}?body=${encoded}`;
 
-  // iOS (IMPORTANT DIFFERENCE)
-  const iosSms = `sms:${phone}&body=${encoded}`;
-
-  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-  const smsUrl = isIOS ? iosSms : androidSms;
-
-  // IMPORTANT: direct navigation (no anchor tag)
   window.location.href = smsUrl;
-
-  // fallback (only if blocked)
-  setTimeout(() => {
-    navigator.clipboard.writeText(message);
-    alert("SMS opened. If not, paste manually in Messages app.");
-  }, 800);
 }
-  }
+};
   /* ================= UI STYLES ================= */
-  const page = {
-    maxWidth: 420,
-    margin: "auto",
-    fontFamily: "Arial",
-    fontSize: 20,
-    lineHeight: 1.8,
-    padding: 12,
-  };
+  /* PAGE */
+/* ================= PAGE ================= */
+const page = {
+  width: "100%",
+  maxWidth: 600,
+  margin: "0 auto",
+  padding: "10px 12px",
+  fontFamily: "Arial",
+  fontSize: 15,
+  lineHeight: 1.5,
+  boxSizing: "border-box",
+};
 
-  const topBar = {
-    display: "flex",
-    gap: 10,
-    marginBottom: 12,
-    flexWrap: "wrap",
-  };
+/* ================= TOP BAR ================= */
+const topBar = {
+  position: "sticky",
+  top: 0,
+  background: "#f8fafc",
+  zIndex: 10,
+  display: "flex",
+  gap: 8,
+  paddingBottom: 10,
+};
 
-  const addBtn = {
-    background: "green",
-    color: "white",
-    padding: "12px 14px",
-    fontSize: 18,
-    border: "none",
-    borderRadius: 6,
-  };
+const addBtn = {
+  flex: 1,
+  background: "#16a34a",
+  color: "white",
+  padding: 12,
+  fontSize: 15,
+  border: "none",
+  borderRadius: 8,
+};
 
-  const delBtn = {
-    background: "red",
-    color: "white",
-    padding: "12px 14px",
-    fontSize: 18,
-    border: "none",
-    borderRadius: 6,
-  };
+const delBtn = {
+  flex: 1,
+  background: "#dc2626",
+  color: "white",
+  padding: 12,
+  fontSize: 15,
+  border: "none",
+  borderRadius: 8,
+};
 
-  const invoice = {
-    border: "1px solid #ddd",
-    padding: 16,
-    marginBottom: 14,
-    fontSize: 20,
-    borderRadius: 8,
-  };
+/* ================= INVOICE CARD ================= */
+const invoice = {
+  border: "1px solid #eee",
+  padding: 12,
+  marginBottom: 14,
+  borderRadius: 12,
+  background: "white",
+  boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
+};
 
-  const row = {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: 10,
-  };
+/* ================= HEADER ROW ================= */
+const row = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 10,
+  flexWrap: "wrap",
+};
 
-  const box = {
-    width: "50%",
-    fontSize: 18,
-  };
+const box = {
+  flex: 1,
+  minWidth: "45%",
+};
 
-  const boxRight = {
-    width: "50%",
-    textAlign: "right",
-    fontSize: 18,
-  };
+const boxRight = {
+  flex: 1,
+  minWidth: "45%",
+  textAlign: "right",
+};
 
-  const itemHead = {
-    display: "flex",
-    justifyContent: "space-between",
-    fontWeight: "bold",
-    marginTop: 12,
-    fontSize: 18,
-  };
+/* ================= TITLE ================= */
+const bigTitle = {
+  fontSize: 18,
+  fontWeight: "bold",
+  marginBottom: 6,
+};
 
-  const itemRow = {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 6,
-  };
+/* ================= ITEM TABLE HEADER ================= */
+const itemHead = {
+  display: "flex",
+  justifyContent: "space-between",
+  marginTop: 10,
+  fontWeight: "bold",
+  fontSize: 14,
+  padding: "6px 0",
+  borderBottom: "1px solid #ddd",
+};
 
-  const xBtn = {
-    background: "black",
-    color: "white",
-    border: "none",
-    padding: "6px 10px",
-    fontSize: 16,
-    borderRadius: 4,
-  };
+const colItem = { width: "40%" };
+const colPrice = { width: "30%", textAlign: "center" };
+const colAction = { width: "20%", textAlign: "right" };
 
-  const actions = {
-    display: "flex",
-    justifyContent: "space-between",
-    marginTop: 12,
-    gap: 10,
-  };
+/* ================= ITEM ROW ================= */
+const itemRow = {
+  display: "flex",
+  gap: 6,
+  alignItems: "center",
+  marginTop: 8,
+};
 
-  const mpesa = {
-    flex: 1,
-    background: "green",
-    color: "white",
-    padding: 12,
-    fontSize: 18,
-    border: "none",
-    borderRadius: 6,
-  };
+const itemInput = {
+  width: "40%",
+  padding: 8,
+  fontSize: 14,
+  borderRadius: 6,
+  border: "1px solid #ccc",
+};
 
-  const pdf = {
-    flex: 1,
-    background: "blue",
-    color: "white",
-    padding: 12,
-    fontSize: 18,
-    border: "none",
-    borderRadius: 6,
-  };
+const priceInput = {
+  width: "30%",
+  padding: 8,
+  fontSize: 14,
+  borderRadius: 6,
+  border: "1px solid #ccc",
+  textAlign: "center",
+};
 
-  const bigTitle = {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 10,
-  };
+const deleteBtn = {
+  width: "20%",
+  background: "#dc2626",
+  color: "white",
+  border: "none",
+  padding: 8,
+  borderRadius: 6,
+};
 
+/* ================= ACTIONS ================= */
+const actions = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 8,
+  marginTop: 12,
+};
+
+const mpesa = {
+  width: "100%",
+  background: "#16a34a",
+  color: "white",
+  padding: 14,
+  fontSize: 15,
+  borderRadius: 8,
+  border: "none",
+};
+
+const pdf = {
+  width: "100%",
+  background: "#2563eb",
+  color: "white",
+  padding: 14,
+  fontSize: 15,
+  borderRadius: 8,
+  border: "none",
+};
   return (
-    <div style={page}>
-      {/* TOP BUTTONS */}
-      <div style={topBar}>
-        <button style={addBtn} onClick={addReceipt}>
-          ➕ Add Receipt
-        </button>
+  <div style={page}>
+    {/* TOP BUTTONS */}
+    <div style={topBar}>
+      <button style={addBtn} onClick={addReceipt}>
+        ➕ Add Receipt
+      </button>
 
-        <button style={delBtn} onClick={deleteReceipt}>
-          🗑 Delete Receipt
-        </button>
-      </div>
+      <button style={delBtn} onClick={deleteReceipt}>
+        🗑 Delete Receipt
+      </button>
+    </div>
 
-      {/* RECEIPTS */}
-      {(customer.debts || []).map((r) => (
-        <div id={`receipt-${r.id}`} key={r.id} style={invoice}>
-          <h2 style={bigTitle}>Invoice Number: {r.invoiceNo}</h2>
+    {/* RECEIPTS */}
+    {(customer.invoice || []).map((r) => (
+      <div id={`receipt-${r.id}`} key={r.id} style={invoice}>
+        <h2 style={bigTitle}>Invoice Number: {r.invoiceNo}</h2>
 
-          <div style={row}>
-            <div style={box}>
-              {user.profilePic && (
-                <img
-                  src={user.profilePic}
-                  alt="shop"
-                  style={{
-                    width: 60,
-                    height: 60,
-                    borderRadius: "50%",
-                    marginBottom: 8,
-                  }}
-                />
-              )}
-
-              <p><b>{user.shopName}</b></p>
-              <p>{user.phone}</p>
-              <p>{user.location}</p>
-            </div>
-
-            <div style={boxRight}>
-              <b>CUSTOMER</b>
-              <div><b>Name:</b> {customer.name}</div>
-              <div><b>Phone:</b> {customer.phone}</div>
-            </div>
-          </div>
-
-          <p><b>Date:</b> {r.date}</p>
-
-          <div style={itemHead}>
-            <span>Item</span>
-            <span>Price</span>
-            <span>Action</span>
-          </div>
-
-          {(r.items || []).map((i) => (
-            <div key={i.id} style={itemRow}>
-              <input
-                style={{ fontSize: 18, padding: "6px 8px", width: "45%" }}
-                value={i.name}
-                onChange={(e) =>
-                  updateItem(r.id, i.id, { name: e.target.value })
-                }
+        {/* SHOP + CUSTOMER INFO */}
+        <div style={row}>
+          <div style={box}>
+            {user.profilePic && (
+              <img
+                src={user.profilePic}
+                alt="shop"
+                style={{
+                  width: 60,
+                  height: 60,
+                  borderRadius: "50%",
+                  marginBottom: 8,
+                }}
               />
+            )}
 
-              <input
-                style={{ fontSize: 18, padding: "6px 8px", width: "35%" }}
-                type="number"
-                value={i.price}
-                onChange={(e) =>
-                  updateItem(r.id, i.id, { price: Number(e.target.value) })
-                }
-              />
-
-              <button onClick={() => deleteItem(r.id, i.id)} style={xBtn}>
-                x
-              </button>
-            </div>
-          ))}
-
-          <button onClick={() => addItem(r.id)}>+ Add Item</button>
-
-          <div style={{ marginTop: 10, textAlign: "right", fontSize: 22 }}>
-            <b>Total: KES {getTotal(r.items)}</b>
+            <p><b>{user.shopName}</b></p>
+            <p>{user.phone}</p>
+            <p>{user.location}</p>
           </div>
 
-          <div style={actions}>
-            <button style={mpesa} onClick={() => shareInvoice(r.id, "sms")}>
-              SMS
-            </button>
-
-            <button style={pdf} onClick={() => shareInvoice(r.id, "whatsapp")}>
-              WhatsApp
-            </button>
+          <div style={boxRight}>
+            <b>CUSTOMER</b>
+            <div><b>Name:</b> {customer.name}</div>
+            <div><b>Phone:</b> {customer.phone}</div>
           </div>
         </div>
-      ))}
-    </div>
-  );
-  }
 
+        <p><b>Date:</b> {r.date}</p>
 
+        {/* TABLE HEADER */}
+        <div style={itemHead}>
+          <span style={colItem}>Item</span>
+          <span style={colPrice}>Price</span>
+          <span style={colAction}>Action</span>
+        </div>
 
+        {/* ITEMS */}
+        {(r.items || []).map((i) => (
+          <div key={i.id} style={itemRow}>
+            <input
+              style={itemInput}
+              value={i.name}
+              onChange={(e) =>
+                updateItem(r.id, i.id, { name: e.target.value })
+              }
+            />
+
+            <input
+              type="number"
+              style={priceInput}
+              value={i.price}
+              onChange={(e) =>
+                updateItem(r.id, i.id, { price: Number(e.target.value) })
+              }
+            />
+
+            <button
+              onClick={() => deleteItem(r.id, i.id)}
+              style={deleteBtn}
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+
+        {/* ADD ITEM */}
+        <button onClick={() => addItem(r.id)}>+ Add Item</button>
+
+        {/* TOTAL */}
+        <div style={{ marginTop: 10, textAlign: "right", fontSize: 22 }}>
+          <b>Total: KES {getTotal(r.items)}</b>
+        </div>
+
+        {/* ACTIONS */}
+        <div style={actions}>
+          <button
+            style={mpesa}
+            onClick={() => shareInvoice(r.id, "sms")}
+          >
+            SMS
+          </button>
+
+          <button
+            style={pdf}
+            onClick={() => shareInvoice(r.id, "whatsapp")}
+          >
+            WhatsApp
+          </button>
+        </div>
+      </div>
+    ))}
+
+  </div>
+);
+}
