@@ -26,11 +26,11 @@ export default function Invoice() {
     const data = JSON.parse(localStorage.getItem(key) || "[]");
 
     setCustomers(data);
-    setCustomer(data.find((c) => c.id === id) || null);
+    setCustomer(data.find((c) => String(c.id) === String(id)) || null);
   }, [user?.email, id]);
 
   const save = (updated) => {
-    const key = `customers_${user.email}`;
+    const key = `customers_${user.profile?.email}`;
     localStorage.setItem(key, JSON.stringify(updated));
 
     setCustomers(updated);
@@ -38,7 +38,8 @@ export default function Invoice() {
   };
 
   if (!user) return <h3>Login required</h3>;
-  if (!customer) return <h3>Customer not found</h3>;
+if (!customers.length) return <h3>Loading...</h3>;
+if (!customer) return <h3>Customer not found</h3>;
 
   /* ➕ ADD RECEIPT */
   const generateInvoiceNo = (invoice) => {

@@ -16,7 +16,6 @@ export default function Login() {
     profilePic: "",
     identifier: "",
 
-    /* 🔥 NEW PAYMENT MODE */
     paymentType: "",
     agentNumber: "",
     storeNumber: "",
@@ -38,7 +37,7 @@ export default function Login() {
 
       const parsed = JSON.parse(savedUser);
 
-      if (parsed?.email || parsed?.phone) {
+      if (parsed?.profile?.email || parsed?.profile?.phone) {
         navigate("/");
       }
     } catch {
@@ -64,58 +63,72 @@ export default function Login() {
 
   /* ================= SUBMIT ================= */
   const handleSubmit = () => {
-    if (isRegister && !form.shopName) {
-      return alert("Shop name required");
-    }
+    if (isRegister && !form.shopName) return alert("Shop name required");
 
-    if (!form.identifier && !isRegister) {
+    if (!form.identifier && !isRegister)
       return alert("Enter email or phone");
-    }
 
-    if (!form.phone && !form.email && isRegister) {
+    if (!form.phone && !form.email && isRegister)
       return alert("Use email OR phone");
-    }
 
-    if (!form.password) {
-      return alert("Password is required");
-    }
+    if (!form.password) return alert("Password is required");
 
     const users = JSON.parse(localStorage.getItem("users") || "[]");
 
-    const identifier = form.identifier || form.email || form.phone;
+    const normalizePhone = (p) =>
+      (p || "").replace(/\s+/g, "").replace("+", "");
 
-    /* ================= DUPLICATE CHECK ================= */
-    const exists = users.find(
-      (u) => u.email === form.email || u.phone === form.phone
-    );
+    const identifier = form.identifier?.trim();
+    const isEmail = identifier?.includes("@");
 
-    if (isRegister && exists) {
-      return alert("User already registered");
-    }
+    /* ================= FIXED DUPLICATE CHECK ================= */
+const exists = users.some((u) => {
+  const email = u.profile?.email?.trim()?.toLowerCase();
+  const phone = normalizePhone(u.profile?.phone);
+
+  const inputEmail = form.email?.trim()?.toLowerCase();
+  const inputPhone = form.phone ? normalizePhone(form.phone) : null;
+
+  const emailMatch =
+    inputEmail && email === inputEmail;
+
+  const phoneMatch =
+    inputPhone && phone === inputPhone;
+
+  return emailMatch || phoneMatch;
+});
 
     /* ================= REGISTER ================= */
     if (isRegister) {
       const newUser = {
         id: crypto.randomUUID(),
-        shopName: form.shopName,
-        phone: form.phone,
-        email: form.email,
-        password: form.password,
-        location: form.location,
-        profilePic: form.profilePic,
+
+        profile: {
+          shopName: form.shopName,
+          email: form.email?.trim() || null,
+          phone: form.phone?.trim() || null,
+          location: form.location || "",
+          profilePic: form.profilePic || "",
+        },
+
+        auth: {
+          password: form.password,
+        },
 
         payment: form.paymentType
-  ? {
-      type: form.paymentType,
-      agentNumber: form.agentNumber,
-      storeNumber: form.storeNumber,
-      tillNumber: form.tillNumber,
-      pochiNumber: form.pochiNumber,
-      sendMoneyNumber: form.sendMoneyNumber,
-      paybillNumber: form.paybillNumber,
-      accountNumber: form.accountNumber,
-    }
-  : null,
+          ? {
+              type: form.paymentType,
+              agentNumber: form.agentNumber || null,
+              storeNumber: form.storeNumber || null,
+              tillNumber: form.tillNumber || null,
+              pochiNumber: form.pochiNumber || null,
+              sendMoneyNumber: form.sendMoneyNumber || null,
+              paybillNumber: form.paybillNumber || null,
+              accountNumber: form.accountNumber || null,
+            }
+          : null,
+
+        createdAt: new Date().toISOString(),
       };
 
       localStorage.setItem("users", JSON.stringify([...users, newUser]));
@@ -124,45 +137,55 @@ export default function Login() {
       return navigate("/");
     }
 
-    /* ================= LOGIN ================= */
-    const user = users.find(
-      (u) =>
-        (u.email === identifier || u.phone === identifier) &&
-        u.password === form.password
-    );
+    /* ================= LOGIN (FIXED STABLE LOGIC) ================= */
+const isEmail = cleanIdentifier?.includes("@");
 
-    if (!user) {
-      return alert("Invalid credentials");
-    }
+const normalizedPhoneInput = cleanIdentifier
+  ? normalizePhone(cleanIdentifier)
+  : null;
 
-    saveSession(user);
-    navigate("/");
+const user = users.find((u) => {
+  const email = u.profile?.email?.trim()?.toLowerCase();
+  const phone = normalizePhone(u.profile?.phone);
+
+  const emailMatch =
+    isEmail && email === cleanIdentifier;
+
+  const phoneMatch =
+    !isEmail &&
+    normalizedPhoneInput &&
+    phone === normalizedPhoneInput;
+
+  const passwordMatch = u.auth?.password === form.password;
+
+  return passwordMatch && (emailMatch || phoneMatch);
+});
+
+  /* ================= RESET USERS ================= */
+  const resetUsers = () => {
+    localStorage.removeItem("users");
+    localStorage.removeItem("user");
+    sessionStorage.removeItem("user");
+    alert("All users cleared. You can register fresh.");
+    window.location.reload();
   };
-
-  /* ================= SAVE SESSION ================= */
-  const saveSession = (user) => {
-    if (rememberMe) {
-      localStorage.setItem("user", JSON.stringify(user));
-    } else {
-      sessionStorage.setItem("user", JSON.stringify(user));
-    }
-  };
-const handleForgotPassword = () => {
+  
+  const handleForgotPassword = () => {
   const identifier = prompt("Enter your Email or Phone");
-
   if (!identifier) return;
 
   const users = JSON.parse(localStorage.getItem("users") || "[]");
 
-  const userIndex = users.findIndex(
-    (u) =>
-      (u.email && u.email === identifier) ||
-      (u.phone && u.phone === identifier)
-  );
+  const userIndex = users.findIndex((u) => {
+    const email = u.profile?.email?.trim()?.toLowerCase();
+    const phone = u.profile?.phone?.trim();
 
-  if (userIndex === -1) {
-    return alert("User not found");
-  }
+    const input = identifier.trim().toLowerCase();
+
+    return email === input || phone === identifier.trim();
+  });
+
+  if (userIndex === -1) return alert("User not found");
 
   const newPassword = prompt("Enter new password");
 
@@ -170,7 +193,7 @@ const handleForgotPassword = () => {
     return alert("Password too short (min 4 chars)");
   }
 
-  users[userIndex].password = newPassword;
+  users[userIndex].auth.password = newPassword;
 
   localStorage.setItem("users", JSON.stringify(users));
 
@@ -181,7 +204,6 @@ const handleForgotPassword = () => {
       <div style={box}>
         <h2>{isRegister ? "Register Account" : "Login"}</h2>
 
-        {/* PROFILE IMAGE */}
         {isRegister && (
           <>
             <label style={{ fontSize: 14 }}>Profile Photo</label>
@@ -189,7 +211,6 @@ const handleForgotPassword = () => {
           </>
         )}
 
-        {/* SHOP NAME */}
         {isRegister && (
           <input
             name="shopName"
@@ -199,7 +220,6 @@ const handleForgotPassword = () => {
           />
         )}
 
-        {/* REGISTER EMAIL + PHONE */}
         {isRegister && (
           <>
             <input
@@ -208,7 +228,6 @@ const handleForgotPassword = () => {
               onChange={handleChange}
               style={input}
             />
-
             <input
               name="phone"
               placeholder="Phone"
@@ -218,7 +237,6 @@ const handleForgotPassword = () => {
           </>
         )}
 
-        {/* LOGIN IDENTIFIER */}
         {!isRegister && (
           <input
             name="identifier"
@@ -228,33 +246,30 @@ const handleForgotPassword = () => {
           />
         )}
 
-        {/* PASSWORD */}
-        {/* PASSWORD */}
-<input
-  name="password"
-  type="password"
-  placeholder="Password"
-  onChange={handleChange}
-  style={input}
-/>
+        <input
+          name="password"
+          type="password"
+          placeholder="Password"
+          onChange={handleChange}
+          style={input}
+        />
 
-{/* FORGOT PASSWORD */}
-{!isRegister && (
-  <p
-    style={{
-      marginTop: 8,
-      marginBottom: 10,
-      color: "blue",
-      cursor: "pointer",
-      fontSize: 13,
-      textAlign: "right"
-    }}
-    onClick={handleForgotPassword}
-  >
-    Forgot Password?
-  </p>
-)}
-        {/* LOCATION */}
+        {!isRegister && (
+          <p
+            style={{
+              marginTop: 8,
+              marginBottom: 10,
+              color: "blue",
+              cursor: "pointer",
+              fontSize: 13,
+              textAlign: "right",
+            }}
+            onClick={handleForgotPassword}
+          >
+            Forgot Password?
+          </p>
+        )}
+
         {isRegister && (
           <input
             name="location"
@@ -264,87 +279,17 @@ const handleForgotPassword = () => {
           />
         )}
 
-        {/* 🔥 PAYMENT MODE SELECT */}
         {isRegister && (
-          <>
-            <select
-              name="paymentType"
-              onChange={handleChange}
-              style={input}
-            >
-              <option value="">Select Payment Mode</option>
-              <option value="agent">Agent Number</option>
-              <option value="till">Till Number</option>
-              <option value="pochi">Pochi la Biashara</option>
-              <option value="sendmoney">Send Money</option>
-              <option value="paybill">PayBill</option>
-            </select>
-
-            {/* CONDITIONAL FIELDS */}
-            {form.paymentType === "agent" && (
-              <>
-                <input
-                  name="agentNumber"
-                  placeholder="Agent Number"
-                  onChange={handleChange}
-                  style={input}
-                />
-                <input
-                  name="storeNumber"
-                  placeholder="Store Number"
-                  onChange={handleChange}
-                  style={input}
-                />
-              </>
-            )}
-
-            {form.paymentType === "till" && (
-              <input
-                name="tillNumber"
-                placeholder="Till Number"
-                onChange={handleChange}
-                style={input}
-              />
-            )}
-
-            {form.paymentType === "pochi" && (
-              <input
-                name="pochiNumber"
-                placeholder="Pochi Number"
-                onChange={handleChange}
-                style={input}
-              />
-            )}
-
-            {form.paymentType === "sendmoney" && (
-              <input
-                name="sendMoneyNumber"
-                placeholder="Send Money Number"
-                onChange={handleChange}
-                style={input}
-              />
-            )}
-
-            {form.paymentType === "paybill" && (
-              <>
-                <input
-                  name="paybillNumber"
-                  placeholder="PayBill Number"
-                  onChange={handleChange}
-                  style={input}
-                />
-                <input
-                  name="accountNumber"
-                  placeholder="Account Number"
-                  onChange={handleChange}
-                  style={input}
-                />
-              </>
-            )}
-          </>
+          <select name="paymentType" onChange={handleChange} style={input}>
+            <option value="">Select Payment Mode</option>
+            <option value="agent">Agent Number</option>
+            <option value="till">Till Number</option>
+            <option value="pochi">Pochi la Biashara</option>
+            <option value="sendmoney">Send Money</option>
+            <option value="paybill">PayBill</option>
+          </select>
         )}
 
-        {/* REMEMBER ME */}
         <div style={{ marginTop: 10 }}>
           <label>
             <input
@@ -356,12 +301,25 @@ const handleForgotPassword = () => {
           </label>
         </div>
 
-        {/* BUTTON */}
         <button onClick={handleSubmit} style={btn}>
           {isRegister ? "Register" : "Login"}
         </button>
 
-        {/* SWITCH */}
+        <button
+          onClick={resetUsers}
+          style={{
+            marginTop: 10,
+            background: "red",
+            color: "white",
+            padding: 14,
+            width: "100%",
+            border: "none",
+            borderRadius: 8,
+          }}
+        >
+          Reset Users (Dev Mode)
+        </button>
+
         <p style={{ marginTop: 10 }}>
           {isRegister ? "Already have account?" : "No account?"}{" "}
           <span
@@ -415,3 +373,4 @@ const btn = {
   borderRadius: 8,
   fontSize: 15,
 };
+}
